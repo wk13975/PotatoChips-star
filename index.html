@@ -433,6 +433,103 @@
         .token-skip-btn:hover {
             background: #e9ecef;
         }
+        .math-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .math-modal-content {
+            background: white;
+            padding: 30px 25px;
+            border-radius: 20px;
+            max-width: 90%;
+            width: 90%;
+            margin: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .math-modal-title {
+            font-size: 22px;
+            color: #ff6b9d;
+            margin-bottom: 20px;
+        }
+
+        .math-question {
+            font-size: 32px;
+            color: #4a90e2;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .math-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 24px;
+            outline: none;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .math-input:focus {
+            border-color: #4a90e2;
+        }
+
+        .math-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .math-confirm-btn {
+            flex: 1;
+            padding: 12px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .math-confirm-btn:hover {
+            background: #357abd;
+        }
+
+        .math-cancel-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .math-cancel-btn:hover {
+            background: #e9ecef;
+        }
+
+        .math-error {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -495,6 +592,20 @@
         </div>
     </div>
 </div>
+
+<div class="math-modal hidden" id="mathModal">
+    <div class="math-modal-content">
+        <h2 class="math-modal-title">🧮 验证挑战</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 10px;">请计算下面的题目来完成点赞：</p>
+        <div class="math-question" id="mathQuestion">? × ? = ?</div>
+        <input type="number" id="mathInput" class="math-input" placeholder="输入答案" inputmode="numeric">
+        <div class="math-error" id="mathError">❌ 答案不对哦，再试一次！</div>
+        <div class="math-btn-group">
+            <button class="math-confirm-btn" id="mathConfirm">确认</button>
+            <button class="math-cancel-btn" id="mathCancel">取消</button>
+        </div>
+    </div>
+</div>
 <script>
     const CONFIG = {
         GITHUB_USERNAME: "wk13975",
@@ -507,7 +618,7 @@
     let currentSHA = { data: null, prizes: null };
     let data = { likes: 0 };
     let prizes = [];
-
+    let mathAnswer = 0; // 存储数学题答案
     // 加载保存的 Token
     function loadToken() {
         const savedToken = localStorage.getItem('github_token');
@@ -523,6 +634,83 @@
         if (token && token.trim()) {
             localStorage.setItem('github_token', token.trim());
             CONFIG.TOKEN = token.trim();
+        }
+    }
+    // 生成数学题
+    function generateMathQuestion() {
+        const num1 = Math.floor(Math.random() * 9) + 1; // 1-9
+        const num2 = Math.floor(Math.random() * 9) + 1; // 1-9
+        mathAnswer = num1 * num2;
+
+        document.getElementById('mathQuestion').textContent = `${num1} × ${num2} = ?`;
+        document.getElementById('mathInput').value = '';
+        document.getElementById('mathError').style.display = 'none';
+    }
+
+    // 显示数学验证弹窗
+    function showMathModal(callback) {
+        if (typeof callback !== 'function') {
+            // console.error('callback 必须是函数');
+            return;
+        }
+
+        generateMathQuestion();
+        document.getElementById('mathModal').classList.remove('hidden');
+
+        // 存储回调函数
+        window.mathCallback = callback;
+
+        // 延迟聚焦，确保弹窗已显示
+        setTimeout(() => {
+            document.getElementById('mathInput').focus();
+        }, 100);
+    }
+
+
+    // 隐藏数学验证弹窗
+    function hideMathModal() {
+        document.getElementById('mathModal').classList.add('hidden');
+        // window.mathCallback = null;
+    }
+
+    // 验证数学答案
+    function verifyMathAnswer() {
+        const userAnswer = parseInt(document.getElementById('mathInput').value);
+
+        console.log('用户输入:', userAnswer, '正确答案:', mathAnswer);
+
+        if (isNaN(userAnswer)) {
+            document.getElementById('mathError').textContent = '❌ 请输入数字！';
+            document.getElementById('mathError').style.display = 'block';
+            return;
+        }
+        if (userAnswer === mathAnswer) {
+            // 先保存回调函数的引用
+            const callback = window.mathCallback;
+            if (!callback || typeof callback !== 'function') {
+                // console.error('回调函数不存在或不是函数');
+                hideMathModal();
+                return;
+            }
+            // 立即隐藏弹窗
+            hideMathModal();
+            // 清空全局回调
+            window.mathCallback = null;
+            // 执行点赞操作
+            try {
+                callback();
+            } catch (e) {
+                console.error('点赞回调执行失败:', e);
+            }
+        } else {
+            document.getElementById('mathError').textContent = '❌ 答案不对哦，再试一次！';
+            document.getElementById('mathError').style.display = 'block';
+            document.getElementById('mathInput').value = '';
+            document.getElementById('mathInput').focus();
+            // 生成新题目
+            setTimeout(() => {
+                generateMathQuestion();
+            }, 800);
         }
     }
 
@@ -557,7 +745,7 @@
             if (json.content) {
                 // const content = b64_to_utf8(json.content.replace(/\s/g, ''));
                 const content = b64_to_utf8(json.content);
-                console.log('读取文件成功:', content);
+                // console.log('读取文件成功:', content);
                 if (path === 'data.json') currentSHA.data = json.sha;
                 if (path === 'prizes.json') currentSHA.prizes = json.sha;
                 return JSON.parse(content);
@@ -591,7 +779,7 @@
 
         showSaving('💾 保存中...');
         const content = utf8_to_b64(JSON.stringify(obj, null, 2));
-        console.log('保存文件:', content, obj);
+        // console.log('保存文件:', content, obj);
         const body = { message: 'update data', content, branch: CONFIG.BRANCH };
         if (path === 'data.json' && currentSHA.data) body.sha = currentSHA.data;
         if (path === 'prizes.json' && currentSHA.prizes) body.sha = currentSHA.prizes;
@@ -677,13 +865,15 @@
     }
 
     // 点赞
-    document.getElementById('likeBtn').addEventListener('click', async () => {
-        data.likes++;
-        createHeartAnimation();
-        renderAll();
-        await saveFile('data.json', data);
+    document.getElementById('likeBtn').addEventListener('click', () => {
+        showMathModal(() => {
+            // console.log('点赞')
+            data.likes++;
+            createHeartAnimation();
+            renderAll();
+            saveFile('data.json', data);
+        });
     });
-
     document.getElementById('starBtn').addEventListener('click', async () => {
         data.likes = data.likes+5;
         createHeartAnimation();
@@ -729,13 +919,21 @@
     function bindExchange() {
         document.querySelectorAll('.exchange-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const need = parseInt(btn.dataset.s)*5;
+                const need = parseInt(btn.dataset.s) * 5;
                 const i = parseInt(btn.dataset.i);
-                if (data.likes >= need) {
-                    data.likes -= need;
-                    renderAll();
-                    await saveFile('data.json', data);
-                    alert(`兑换成功：${prizes[i].name} 🎉`);
+                const prizeName = prizes[i].name;
+                const starsNeeded = parseInt(btn.dataset.s);
+
+                // 显示确认弹窗
+                if (confirm(`兑换 ${prizeName} 将扣除 ${starsNeeded} 颗🌟\n（需要 ${need} 个👍）\n\n确定要兑换吗？`)) {
+                    if (data.likes >= need) {
+                        data.likes -= need;
+                        renderAll();
+                        await saveFile('data.json', data);
+                        alert(`🎉 兑换成功！\n\n获得：${prizeName}`);
+                    } else {
+                        alert(`❌ 点赞数不足！\n\n需要：${need} 个点赞\n当前：${data.likes} 个点赞`);
+                    }
                 }
             });
         });
@@ -803,7 +1001,22 @@
             document.getElementById('submitToken').click();
         }
     });
+    // 数学验证 - 确认按钮
+    document.getElementById('mathConfirm').addEventListener('click', () => {
+        verifyMathAnswer();
+    });
 
+    // 数学验证 - 取消按钮
+    document.getElementById('mathCancel').addEventListener('click', () => {
+        hideMathModal();
+    });
+
+    // 数学验证 - 回车提交
+    document.getElementById('mathInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            verifyMathAnswer();
+        }
+    });
     // 初始化应用
     async function initializeApp() {
         await loadFromCloud();
