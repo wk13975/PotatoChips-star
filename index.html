@@ -512,8 +512,6 @@
             });
         });
     }
-
-
     // 删除奖品
     function bindDelete() {
         document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -528,19 +526,16 @@
             });
         });
     }
-
     // 按钮状态
     function checkPrizeDisabled() {
         document.querySelectorAll('.exchange-btn').forEach(btn => {
             btn.disabled = data.likes/5 < parseInt(btn.dataset.s);
         });
     }
-
     // 关闭弹窗
     document.getElementById('closeModal').addEventListener('click', () => {
         document.getElementById('encourageModal').classList.add('hidden');
     });
-
     // 启动
     window.onload = async () => {
         await loadFromCloud();
