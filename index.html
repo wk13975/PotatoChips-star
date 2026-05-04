@@ -366,7 +366,8 @@
     async function fetchFile(path) {
         try {
             const res = await fetch(`${API_BASE}/${path}`, {
-                headers: { Authorization: `token ${CONFIG.TOKEN}` }
+                headers: { Authorization: `token ${CONFIG.TOKEN}` ,
+                    'Accept': 'application/vnd.github.v3+json'}
             });
             const json = await res.json();
             const content = json.content ? atob(json.content.replace(/\s/g, '')) : '{}';
@@ -391,7 +392,8 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `token ${CONFIG.TOKEN}`
+                    Authorization: `token ${CONFIG.TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 },
                 body: JSON.stringify(body)
             });
