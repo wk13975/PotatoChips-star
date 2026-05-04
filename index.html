@@ -299,6 +299,114 @@
             margin-top: 10px;
             font-size: 14px;
         }
+
+        .saving {
+            text-align: center;
+            color: #666;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .token-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .token-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .token-modal-title {
+            font-size: 22px;
+            color: #ff6b9d;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .token-modal-text {
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: #666;
+        }
+
+        .token-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+
+        .token-input:focus {
+            border-color: #4a90e2;
+        }
+
+        .token-help {
+            background: #f0f7ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #4a90e2;
+        }
+
+        .token-help a {
+            color: #4a90e2;
+            text-decoration: underline;
+        }
+
+        .token-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .token-submit-btn {
+            flex: 1;
+            padding: 12px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .token-submit-btn:hover {
+            background: #357abd;
+        }
+
+        .token-skip-btn {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .token-skip-btn:hover {
+            background: #e9ecef;
+        }
     </style>
 </head>
 <body>
@@ -341,12 +449,31 @@
         <button class="close-modal" id="closeModal">我知道啦</button>
     </div>
 </div>
-
+<div class="token-modal" id="tokenModal">
+    <div class="token-modal-content">
+        <h2 class="token-modal-title">🔑 配置 GitHub Token</h2>
+        <div class="token-help">
+            💡 提示：Token 仅保存在您的浏览器中，不会上传到服务器
+        </div>
+        <p class="token-modal-text">
+            如需同步数据到 GitHub，请输入 Personal Access Token：<br>
+            1. 访问 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置</a><br>
+            2. 点击 "Generate new token (classic)"<br>
+            3. 勾选 <strong>repo</strong> 权限<br>
+            4. 生成后复制粘贴到下方
+        </p>
+        <input type="text" id="tokenInput" class="token-input" placeholder="ghp_xxxxxxxxxxxx 或 github_pat_xxxxxxxxxxxx">
+        <div class="token-btn-group">
+            <button class="token-submit-btn" id="submitToken">保存并继续</button>
+            <button class="token-skip-btn" id="skipToken">跳过（仅本地使用）</button>
+        </div>
+    </div>
+</div>
 <script>
     const CONFIG = {
         GITHUB_USERNAME: "wk13975",
         REPO_NAME: "PotatoChips-star",
-        TOKEN: "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",
+        TOKEN: "", // 从 LocalStorage 加载
         BRANCH: "main"
     };
 
@@ -354,6 +481,24 @@
     let currentSHA = { data: null, prizes: null };
     let data = { likes: 0 };
     let prizes = [];
+
+    // 加载保存的 Token
+    function loadToken() {
+        const savedToken = localStorage.getItem('github_token');
+        if (savedToken) {
+            CONFIG.TOKEN = savedToken;
+            return true;
+        }
+        return false;
+    }
+
+    // 保存 Token
+    function saveToken(token) {
+        if (token && token.trim()) {
+            localStorage.setItem('github_token', token.trim());
+            CONFIG.TOKEN = token.trim();
+        }
+    }
 
     // 显示提示
     function showSaving(text) {
@@ -364,26 +509,64 @@
 
     // 读取 GitHub 文件
     async function fetchFile(path) {
+        if (!CONFIG.TOKEN) {
+            throw new Error('未配置 Token');
+        }
         try {
             const res = await fetch(`${API_BASE}/${path}`, {
-                headers: { Authorization: `token ${CONFIG.TOKEN}` ,
-                    'Accept': 'application/vnd.github.v3+json'}
+                headers: {
+                    Authorization: `Bearer ${CONFIG.TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
             });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    showSaving('❌ Token 无效');
+                    localStorage.removeItem('github_token');
+                    CONFIG.TOKEN = '';
+                }
+                throw new Error(`HTTP ${res.status}`);
+            }
             const json = await res.json();
-            const content = json.content ? atob(json.content.replace(/\s/g, '')) : '{}';
-            if (path === 'data.json') currentSHA.data = json.sha;
-            if (path === 'prizes.json') currentSHA.prizes = json.sha;
-            return JSON.parse(content);
+            if (json.content) {
+                // const content = b64_to_utf8(json.content.replace(/\s/g, ''));
+                const content = b64_to_utf8(json.content);
+                console.log('读取文件成功:', content);
+                if (path === 'data.json') currentSHA.data = json.sha;
+                if (path === 'prizes.json') currentSHA.prizes = json.sha;
+                return JSON.parse(content);
+            }
+            return path === 'data.json' ? { likes: 0 } : [];
         } catch (e) {
-            return path === 'data.json' ? { likes: 0, stars: 0 } : [];
+            console.error('读取文件失败:', e);
+            throw e;
         }
+    }
+
+    function utf8_to_b64(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            (_, p1) => String.fromCharCode(parseInt(p1, 16))
+        ));
+    }
+
+    // 解码：Base64 → UTF-8 → Unicode
+    function b64_to_utf8(b64) {
+        return decodeURIComponent(atob(b64).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
     }
 
     // 保存到 GitHub
     async function saveFile(path, obj) {
+        if (!CONFIG.TOKEN) {
+            showSaving('⚠️ 未配置 Token，仅本地保存');
+            return;
+        }
+
         showSaving('💾 保存中...');
-        const content = btoa(JSON.stringify(obj, null, 2));
-        const body = { message: 'update', content, branch: CONFIG.BRANCH };
+        const content = utf8_to_b64(JSON.stringify(obj, null, 2));
+        console.log('保存文件:', content, obj);
+        const body = { message: 'update data', content, branch: CONFIG.BRANCH };
         if (path === 'data.json' && currentSHA.data) body.sha = currentSHA.data;
         if (path === 'prizes.json' && currentSHA.prizes) body.sha = currentSHA.prizes;
 
@@ -392,27 +575,48 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `token ${CONFIG.TOKEN}`,
+                    Authorization: `Bearer ${CONFIG.TOKEN}`,
                     'Accept': 'application/vnd.github.v3+json'
                 },
                 body: JSON.stringify(body)
             });
+
+            if (!res.ok) {
+                if (res.status === 401) {
+                    showSaving('❌ Token 无效');
+                    localStorage.removeItem('github_token');
+                    CONFIG.TOKEN = '';
+                } else {
+                    showSaving(`❌ 保存失败: ${res.status}`);
+                }
+                return;
+            }
+
             const result = await res.json();
             if (path === 'data.json') currentSHA.data = result.content.sha;
             if (path === 'prizes.json') currentSHA.prizes = result.content.sha;
             showSaving('✅ 同步成功！');
         } catch (e) {
-            showSaving('❌ 保存失败');
+            console.error('保存失败:', e);
+            showSaving('❌ 网络错误');
         }
     }
 
     // 加载云端数据
     async function loadFromCloud() {
+        if (!CONFIG.TOKEN) {
+            showSaving('⚠️ 使用本地模式');
+            return;
+        }
+
         showSaving('🔄 同步数据...');
-        data = await fetchFile('data.json');
-        prizes = await fetchFile('prizes.json');
-        renderAll();
-        showSaving('✅ 已同步');
+        try {
+            data = await fetchFile('data.json');
+            prizes = await fetchFile('prizes.json');
+            showSaving('✅ 已同步');
+        } catch (e) {
+            showSaving('⚠️ 使用本地数据');
+        }
     }
     // ==============================================
     // 核心：纯图标显示（无数字）
@@ -540,6 +744,60 @@
         setTimeout(() => {
             document.getElementById('encourageModal').classList.remove('hidden');
         }, 600);
+    };
+
+    // 关闭弹窗
+    document.getElementById('closeModal').addEventListener('click', () => {
+        document.getElementById('encourageModal').classList.add('hidden');
+    });
+
+    // Token 提交
+    document.getElementById('submitToken').addEventListener('click', () => {
+        const token = document.getElementById('tokenInput').value.trim();
+        if (token) {
+            saveToken(token);
+            document.getElementById('tokenModal').style.display = 'none';
+            showSaving('✅ Token 已保存');
+            initializeApp();
+        } else {
+            alert('请输入 Token 或点击跳过按钮');
+        }
+    });
+
+    // 跳过 Token
+    document.getElementById('skipToken').addEventListener('click', () => {
+        document.getElementById('tokenModal').style.display = 'none';
+        showSaving('⚠️ 本地模式（数据不云同步）');
+        initializeApp();
+    });
+
+    // 回车提交
+    document.getElementById('tokenInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('submitToken').click();
+        }
+    });
+
+    // 初始化应用
+    async function initializeApp() {
+        await loadFromCloud();
+        renderAll();
+        setTimeout(() => {
+            document.getElementById('encourageModal').classList.remove('hidden');
+        }, 600);
+    }
+
+    // 启动
+    window.onload = () => {
+        const hasToken = loadToken();
+        if (hasToken) {
+            // 已有 Token，直接初始化
+            document.getElementById('tokenModal').style.display = 'none';
+            initializeApp();
+        } else {
+            // 显示 Token 输入框
+            document.getElementById('tokenModal').style.display = 'flex';
+        }
     };
 </script>
 </body>
