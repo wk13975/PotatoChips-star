@@ -64,7 +64,7 @@
         .count-item {
             text-align: center;
             background: #f8f9fa;
-            padding: 12px 15px;
+            padding: 12px;
             border-radius: 15px;
             width: 100%;
             min-height: 80px;
@@ -97,7 +97,7 @@
             gap: 4px;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
+            font-size: 30px;
             min-height: 35px;
             padding: 12px;
             background: #f8f9fa;
@@ -107,8 +107,8 @@
 
         .like-btn {
             width: 90px;
-            height: 70px;
-            border-radius: 25px;
+            height: 60px;
+            border-radius: 20px;
             border: none;
             background: #ff6b9d;
             color: white;
@@ -152,18 +152,28 @@
 
         .add-prize {
             display: flex;
-            flex-direction: column;
             gap: 10px;
             margin-bottom: 15px;
         }
 
-        .add-prize input {
-            width: 100%;
+        .prize-name-input {
+            flex: 3;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 16px;
             outline: none;
+            min-width: 0;
+        }
+
+        .prize-star-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            min-width: 0;
         }
 
         .add-prize input:focus {
@@ -171,8 +181,8 @@
         }
 
         .add-btn {
-            width: 100%;
-            padding: 12px 20px;
+            /*flex: 1;*/
+            padding: 12px;
             background: #4a90e2;
             color: white;
             border: none;
@@ -180,6 +190,7 @@
             cursor: pointer;
             font-size: 16px;
             -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .add-btn:hover {
             background: #357abd;
@@ -530,6 +541,19 @@
             margin-top: 10px;
             display: none;
         }
+
+        /*!* 小屏幕手机优化 *!*/
+        /*@media (max-width: 767px) {*/
+        /*    .add-prize {*/
+        /*        flex-direction: column;*/
+        /*    }*/
+
+        /*    .prize-name-input,*/
+        /*    .prize-star-input,*/
+        /*    .add-btn {*/
+        /*        width: 100%;*/
+        /*    }*/
+        /*}*/
     </style>
 </head>
 <body>
@@ -540,7 +564,7 @@
     <div class="like-area">
         <div class="count-box">
             <div class="count-item">
-                <h3>我的成就</h3>
+                <h3>小薯片的</h3>
                 <div id="combinedIcons" class="combined-icons">暂无数据</div>
             </div>
         </div>
@@ -553,9 +577,9 @@
     <div class="prize-section">
         <h2 class="section-title">🎁 奖品兑换区</h2>
         <div class="add-prize">
-            <input type="text" id="prizeName" placeholder="奖品名称">
-            <input type="number" id="prizeStar" placeholder="需要星星数" min="1">
-            <button class="add-btn" id="addPrizeBtn">添加奖品</button>
+            <input type="text" id="prizeName" class="prize-name-input" placeholder="奖品名称">
+            <input type="number" id="prizeStar" class="prize-star-input" placeholder="星星数" min="1">
+            <button class="add-btn" id="addPrizeBtn">添加🎁</button>
         </div>
         <div class="prize-list" id="prizeList"></div>
     </div>
