@@ -898,11 +898,13 @@
             saveFile('data.json', data);
         });
     });
-    document.getElementById('starBtn').addEventListener('click', async () => {
-        data.likes = data.likes+5;
-        createHeartAnimation();
-        renderAll();
-        await saveFile('data.json', data);
+    document.getElementById('starBtn').addEventListener('click',  () => {
+        showMathModal(() => {
+            data.likes = data.likes+5;
+            createHeartAnimation();
+            renderAll();
+            saveFile('data.json', data);
+        });
     });
 
     // 渲染奖品
